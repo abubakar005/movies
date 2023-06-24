@@ -1,10 +1,13 @@
-package com.mobiquity.util;
+package com.backbase.movies.util;
 
 /**
  * This is the Constant class where all the static data available including error messages and Regex
  * */
 
 public final class Constants {
+
+    public static final String COMMA_SEPARATOR = ",";
+    public static final int BATCH_SIZE = 1000;
 
     public static final String REGEX_ITEM = "(?<index>\\d+),(?<weight>\\d+\\.\\d+),€(?<cost>\\d+)";
     public static final String REGEX_LINE = String.format("(\\d+) : ((\\(%s)\\s*\\)+)", REGEX_ITEM);
