@@ -3,15 +3,20 @@ package com.backbase.movies.service.impl;
 import com.backbase.movies.dto.MovieInfoDto;
 import com.backbase.movies.entity.MovieInfo;
 import com.backbase.movies.entity.MovieRating;
+import com.backbase.movies.entity.User;
 import com.backbase.movies.exception.NotFoundException;
 import com.backbase.movies.exception.ServiceUnavailableException;
 import com.backbase.movies.repository.MovieInfoRepository;
 import com.backbase.movies.repository.MovieRatingRepository;
+import com.backbase.movies.repository.UserRepository;
 import com.backbase.movies.service.MovieService;
 import com.backbase.movies.util.Constants;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,10 +37,13 @@ public class MovieServiceImpl implements MovieService {
     private String OMDB_API_KEY;
     private final MovieInfoRepository movieInfoRepository;
     private final MovieRatingRepository movieRatingRepository;
+    private final UserRepository userRepository;
 
-    public MovieServiceImpl(MovieInfoRepository movieInfoRepository, MovieRatingRepository movieRatingRepository) {
+    public MovieServiceImpl(MovieInfoRepository movieInfoRepository, MovieRatingRepository movieRatingRepository
+            , UserRepository userRepository) {
         this.movieInfoRepository = movieInfoRepository;
         this.movieRatingRepository = movieRatingRepository;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -104,11 +112,11 @@ public class MovieServiceImpl implements MovieService {
     @Override
     public void saveRating(String title, double rating) throws Exception {
 
-        MovieInfoDto movieInfo = searchMovieByTitle(title);
+        //MovieInfoDto movieInfo = searchMovieByTitle(title);
         MovieRating movieRating = MovieRating.builder()
                 .rating(rating)
                 .movieId(1l)
-                .userId(100l)
+                .user(getAuthenticatedUser())
                 .build();
         movieRatingRepository.save(movieRating);
     }
@@ -123,5 +131,16 @@ public class MovieServiceImpl implements MovieService {
                 .additionalInfo(fields[Constants.INDEX_THREE])
                 .oscarWon(fields[Constants.INDEX_FOUR])
                 .build();
+    }
+
+    private User getAuthenticatedUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return null;
+        }
+
+        var userDetails = (UserDetails) authentication.getPrincipal();
+        return userRepository.findByUserName(userDetails.getUsername()).orElse(null);
     }
 }

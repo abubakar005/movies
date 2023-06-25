@@ -15,13 +15,18 @@ import java.io.Serializable;
 @Entity
 @Table(name = "Movie_Rating")
 public class MovieRating implements Serializable {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     @Column
     private Long movieId;
-    @Column
-    private Long userId;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
+
     @Column
     private Double rating;
 }

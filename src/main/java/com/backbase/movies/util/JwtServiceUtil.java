@@ -15,13 +15,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
+
 @Component
 public class JwtServiceUtil {
 
-    @Value("${jwt.secret.key}")
+    @Value("${jwtSecret}")
     private String SECRET_KEY;
 
-    @Value("${token.validity.milliseconds}")
+    @Value("${jwtExpirationInMs}")
     private Long TOKEN_EXPIRY;
 
     public String extractUsername(String token) {
@@ -61,16 +62,24 @@ public class JwtServiceUtil {
     }
 
     private String createToken(Map<String, Object> claims, String userName) {
+
+        Date now = new Date();
+        Date expiry = new Date(now.getTime() + TOKEN_EXPIRY);
+
         return Jwts.builder()
                 .setClaims(claims)
                 .setSubject(userName)
-                .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis()+TOKEN_EXPIRY))
+                .setIssuedAt(now)
+                .setExpiration(expiry)
                 .signWith(getSignKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
     private Key getSignKey() {
         byte[] keyBytes = Decoders.BASE64.decode(SECRET_KEY);
         return Keys.hmacShaKeyFor(keyBytes);
+    }
+
+    public Long getUserIdFromToken(String token) {
+        return Long.parseLong(extractAllClaims(token).getSubject());
     }
 }
