@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @Slf4j
 @RestControllerAdvice
 public class ExceptionControllerAdvisor {
-/*
+
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(APIException.class)
     public ResponseEntity<ErrorInfo> handleValidationException(APIException exception) {
@@ -28,5 +28,19 @@ public class ExceptionControllerAdvisor {
     public ResponseEntity<ErrorInfo> handleNotFoundException(NotFoundException exception) {
         log.error("Exception occurred with errors: {}", exception.getMsg());
         return new ResponseEntity<>(new ErrorInfo(exception.getCode(), exception.getMsg()), HttpStatus.NOT_FOUND);
-    } */
+    }
+
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+    @ExceptionHandler(ServiceUnavailableException.class)
+    public ResponseEntity<ErrorInfo> serviceUnAvailableException(ServiceUnavailableException exception) {
+        log.error("Exception occurred with errors: {}", exception.getMsg());
+        return new ResponseEntity<>(new ErrorInfo(exception.getCode(), exception.getMsg()), HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
+    @ResponseStatus(HttpStatus.CONFLICT)
+    @ExceptionHandler(DataConflictException.class)
+    public ResponseEntity<ErrorInfo> dataConflictException(DataConflictException exception) {
+        log.error("Exception occurred with errors: {}", exception.getMsg());
+        return new ResponseEntity<>(new ErrorInfo(exception.getCode(), exception.getMsg()), HttpStatus.CONFLICT);
+    }
 }
