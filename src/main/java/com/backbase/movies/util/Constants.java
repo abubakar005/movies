@@ -38,6 +38,9 @@ public final class Constants {
     public static final String ERROR_DUPLICATE_USER_NAME_MSG = "Username is already exist!";
     public static final int ERROR_DUPLICATE_USER_EMAIL = 105;
     public static final String ERROR_DUPLICATE_USER_EMAIL_MSG = "User email is already exist!";
+    public static final int ERROR_USER_NOT_AUTHENTICATED = 106;
+    public static final String ERROR_USER_NOT_AUTHENTICATED_MSG = "User not authenticated!";
+
 
 
 

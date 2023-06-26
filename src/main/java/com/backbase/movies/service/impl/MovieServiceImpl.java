@@ -6,6 +6,7 @@ import com.backbase.movies.entity.MovieRating;
 import com.backbase.movies.entity.User;
 import com.backbase.movies.exception.NotFoundException;
 import com.backbase.movies.exception.ServiceUnavailableException;
+import com.backbase.movies.exception.UserUnauthorizedException;
 import com.backbase.movies.repository.MovieInfoRepository;
 import com.backbase.movies.repository.MovieRatingRepository;
 import com.backbase.movies.repository.UserRepository;
@@ -136,9 +137,8 @@ public class MovieServiceImpl implements MovieService {
     private User getAuthenticatedUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return null;
-        }
+        if (authentication == null || !authentication.isAuthenticated())
+            throw new UserUnauthorizedException(Constants.ERROR_USER_NOT_AUTHENTICATED, Constants.ERROR_USER_NOT_AUTHENTICATED_MSG);
 
         var userDetails = (UserDetails) authentication.getPrincipal();
         return userRepository.findByUserName(userDetails.getUsername()).orElse(null);

@@ -25,21 +25,21 @@ public class UserServiceImpl implements UserService {
     @Override
     public void createUser(CreateUserRequest userRequest) {
 
-        Optional<User> byUserNameOrEmail = userRepository.findByUserNameOrEmail(userRequest.getUserName(), userRequest.getEmail());
+        Optional<User> byUserNameOrEmail = userRepository.findByUserNameOrEmail(userRequest.username(), userRequest.email());
 
         byUserNameOrEmail.ifPresent(user -> {
-            if (user.getUserName().equals(userRequest.getUserName()))
+            if (user.getUserName().equals(userRequest.username()))
                 throw new DataConflictException(Constants.ERROR_DUPLICATE_USER_NAME, Constants.ERROR_DUPLICATE_USER_NAME_MSG);
 
-            if (user.getEmail().equals(userRequest.getEmail()))
+            if (user.getEmail().equals(userRequest.email()))
                 throw new DataConflictException(Constants.ERROR_DUPLICATE_USER_EMAIL, Constants.ERROR_DUPLICATE_USER_EMAIL_MSG);
         });
 
         User newUser = User.builder()
-                .userName(userRequest.getUserName())
-                .email(userRequest.getEmail())
-                .password(passwordEncoder.encode(userRequest.getPassword()))
-                .roles(userRequest.getRoles())
+                .userName(userRequest.username())
+                .email(userRequest.email())
+                .password(passwordEncoder.encode(userRequest.password()))
+                .roles(userRequest.roles())
                 .build();
 
         userRepository.save(newUser);

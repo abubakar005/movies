@@ -1,60 +1,31 @@
 package com.backbase.movies.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Getter;
-import lombok.Setter;
-
 import java.util.List;
 
-@Getter
-@Setter
-public class MovieInfoDto {
-
-    @JsonProperty("Title")
-    public String title;
-    @JsonProperty("Year")
-    public String year;
-    @JsonProperty("Rated")
-    public String rated;
-    @JsonProperty("Released")
-    public String released;
-    @JsonProperty("Runtime")
-    public String runtime;
-    @JsonProperty("Genre")
-    public String genre;
-    @JsonProperty("Director")
-    public String director;
-    @JsonProperty("Writer")
-    public String writer;
-    @JsonProperty("Actors")
-    public String actors;
-    @JsonProperty("Plot")
-    public String plot;
-    @JsonProperty("Language")
-    public String language;
-    @JsonProperty("Country")
-    public String country;
-    @JsonProperty("Awards")
-    public String awards;
-    @JsonProperty("Poster")
-    public String poster;
-    @JsonProperty("Ratings")
-    public List<Rating> ratings;
-    @JsonProperty("Metascore")
-    public String metaScore;
-    public String imdbRating;
-    public String imdbVotes;
-    public String imdbID;
-    @JsonProperty("Type")
-    public String type;
-    @JsonProperty("DVD")
-    public String dVD;
-    @JsonProperty("BoxOffice")
-    public String boxOffice;
-    @JsonProperty("Production")
-    public String production;
-    @JsonProperty("Website")
-    public String website;
-    @JsonProperty("Response")
-    public String response;
+public record MovieInfoDto( @JsonProperty("Title") String title,
+                            @JsonProperty("Year") String year,
+                            @JsonProperty("Rated") String rated,
+                            @JsonProperty("Released") String released,
+                            @JsonProperty("Runtime") String runtime,
+                            @JsonProperty("Genre") String genre,
+                            @JsonProperty("Director") String director,
+                            @JsonProperty("Writer") String writer,
+                            @JsonProperty("Actors") String actors,
+                            @JsonProperty("Plot") String plot,
+                            @JsonProperty("Language") String language,
+                            @JsonProperty("Country") String country,
+                            @JsonProperty("Awards") String awards,
+                            @JsonProperty("Poster") String poster,
+                            @JsonProperty("Ratings") List<Rating> ratings,
+                            @JsonProperty("Metascore") String metaScore,
+                            String imdbRating,
+                            String imdbVotes,
+                            String imdbID,
+                            @JsonProperty("Type") String type,
+                            @JsonProperty("DVD") String dVD,
+                            @JsonProperty("BoxOffice") String boxOffice,
+                            @JsonProperty("Production") String production,
+                            @JsonProperty("Website") String website,
+                            @JsonProperty("Response") String response) {
 }

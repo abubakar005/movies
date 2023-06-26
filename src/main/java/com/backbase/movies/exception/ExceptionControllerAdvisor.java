@@ -16,11 +16,11 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class ExceptionControllerAdvisor {
 
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    @ExceptionHandler(APIException.class)
-    public ResponseEntity<ErrorInfo> handleValidationException(APIException exception) {
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    @ExceptionHandler(UserUnauthorizedException.class)
+    public ResponseEntity<ErrorInfo> handleValidationException(UserUnauthorizedException exception) {
         log.error("Validation exception occurred with errors: {}", exception.getMessage());
-        return new ResponseEntity<>(new ErrorInfo(exception.getMessage()), HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(new ErrorInfo(exception.getCode(), exception.getMessage()), HttpStatus.UNAUTHORIZED);
     }
 
     @ResponseStatus(HttpStatus.NOT_FOUND)
