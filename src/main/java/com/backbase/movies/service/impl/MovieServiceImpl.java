@@ -1,20 +1,23 @@
 package com.backbase.movies.service.impl;
 
 import com.backbase.movies.dto.MovieInfoDto;
-import com.backbase.movies.entity.MovieInfo;
+import com.backbase.movies.entity.Movie;
 import com.backbase.movies.entity.MovieRating;
 import com.backbase.movies.entity.User;
+import com.backbase.movies.exception.GeneralException;
 import com.backbase.movies.exception.NotFoundException;
 import com.backbase.movies.exception.ServiceUnavailableException;
 import com.backbase.movies.exception.UserUnauthorizedException;
-import com.backbase.movies.repository.MovieInfoRepository;
+import com.backbase.movies.repository.MovieRepository;
 import com.backbase.movies.repository.MovieRatingRepository;
 import com.backbase.movies.repository.UserRepository;
 import com.backbase.movies.service.MovieService;
+import com.backbase.movies.util.AwardsInfoFileUploadUtil;
 import com.backbase.movies.util.Constants;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -23,12 +26,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @Slf4j
@@ -36,57 +42,88 @@ public class MovieServiceImpl implements MovieService {
 
     @Value("${OMDB_API_KEY:NoKey}")
     private String OMDB_API_KEY;
-    private final MovieInfoRepository movieInfoRepository;
+    private final MovieRepository movieRepository;
     private final MovieRatingRepository movieRatingRepository;
     private final UserRepository userRepository;
 
-    public MovieServiceImpl(MovieInfoRepository movieInfoRepository, MovieRatingRepository movieRatingRepository
+    public MovieServiceImpl(MovieRepository movieRepository, MovieRatingRepository movieRatingRepository
             , UserRepository userRepository) {
-        this.movieInfoRepository = movieInfoRepository;
+        this.movieRepository = movieRepository;
         this.movieRatingRepository = movieRatingRepository;
         this.userRepository = userRepository;
     }
 
     @Override
-    @Transactional
-    public void importDataFromCSV(String filePath) throws Exception {
-        List<MovieInfo> entities = new ArrayList<>();
+    public String hasWonBestPictureAward(String movieTitle) {
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
-            String line;
-            int count = 0;
+        boolean oscarWon = false;
 
-            while ((line = reader.readLine()) != null) {
+        try {
+            Optional<Movie> movieObj = movieRepository.findByTitle(movieTitle);
 
-                // Ignoring title line
-                if(line.startsWith(Constants.HEADER_COLUMN_YEAR))
-                    continue;
-                // Parse and process CSV line
-                entities.add(parseCSVLine(line));
-                count++;
+            if (movieObj.isPresent()) {
+                oscarWon = movieObj.get().getOscarWon();
+            } else {
+                MovieInfoDto movieInfo = searchMovieByTitle(movieTitle);
+                String awardStatus = AwardsInfoFileUploadUtil.getBestPictureAwardsMap().get(movieTitle);
+                oscarWon = awardStatus != null && awardStatus.equals(Constants.YES);
 
-                if (count % Constants.BATCH_SIZE == 0) {
-                    movieInfoRepository.saveAll(entities);
-                    entities.clear();
-                }
+                Movie movie = dtoToEntity(movieInfo, oscarWon);
+                movieRepository.save(movie);
             }
+        } catch (NotFoundException nfe) {
+            throw new NotFoundException(nfe.getCode(), nfe.getMsg());
+        } catch (ServiceUnavailableException sue) {
+            throw new ServiceUnavailableException(sue.getCode(), sue.getMsg());
+        } catch (Exception e) {
+            throw new GeneralException(Constants.GENERAL_ERROR, e.getMessage());
         }
 
-        // Save any remaining entities
-        if (!entities.isEmpty()) {
-            movieInfoRepository.saveAll(entities);
-        }
+        return oscarWon ? String.format(Constants.ERROR_MOVIE_WON_AWARD_MSG, movieTitle)
+                : String.format(Constants.ERROR_MOVIE_NOT_WON_AWARD_MSG, movieTitle);
     }
 
     @Override
-    public MovieInfoDto searchMovieByTitle(String title) throws Exception {
+    public void saveRating(String title, int rating) {
+        Movie movie = movieRepository.findByTitle(title)
+                .orElseGet(() -> {
+                    try {
+                        MovieInfoDto movieInfoDto = searchMovieByTitle(title);
+                        String result = AwardsInfoFileUploadUtil.getBestPictureAwardsMap().get(title);
+                        boolean awardWon = result != null && result.equals(Constants.YES);
+
+                        return dtoToEntity(movieInfoDto, awardWon);
+                    } catch (Exception e) {
+                        throw new GeneralException(Constants.GENERAL_ERROR, e.getMessage());
+                    }
+                });
+
+        long totalVotes = movie.getVotes();
+        BigDecimal oldRating = movie.getRating();
+
+        BigDecimal newRating = BigDecimal.valueOf(rating);
+        BigDecimal updatedRating = oldRating.multiply(BigDecimal.valueOf(totalVotes)).add(newRating);
+        long updatedVotes = totalVotes + 1;
+        movie.setRating(updatedRating.divide(BigDecimal.valueOf(updatedVotes), 1, RoundingMode.CEILING));
+        movie.setVotes(updatedVotes);
+
+        movieRepository.save(movie);
+          /* MovieRating movieRating = MovieRating.builder()
+                .rating(rating)
+                .movieId(1l)
+                .user(getAuthenticatedUser())
+                .build();
+        movieRatingRepository.save(movieRating);*/
+    }
+
+    private MovieInfoDto searchMovieByTitle(String movieTitle) throws Exception {
 
         if(OMDB_API_KEY.isBlank() || OMDB_API_KEY.equals(Constants.OMDB_API_DEFAULT_NO_KEY))
             throw new NotFoundException(Constants.ERROR_OMDB_API_KEY_NOT_FOUND, Constants.ERROR_OMDB_API_KEY_NOT_FOUND_MSG);
 
         HttpClient httpClient = HttpClient.newHttpClient();
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(String.format(Constants.OMDB_API_URL, OMDB_API_KEY, title)))
+                .uri(URI.create(String.format(Constants.OMDB_API_URL, OMDB_API_KEY, movieTitle.replace(Constants.CHARACTER_SPACE, Constants.CHARACTER_PLUS))))
                 .GET()
                 .build();
 
@@ -99,7 +136,7 @@ public class MovieServiceImpl implements MovieService {
         if (statusCode == 200) {
 
             if(response.body().contains(Constants.ERROR_MESSAGE))
-                throw new NotFoundException(Constants.ERROR_MOVIE_NOT_FOUND, String.format(Constants.ERROR_MOVIE_NOT_FOUND_MSG, title));
+                throw new NotFoundException(Constants.ERROR_MOVIE_NOT_FOUND, String.format(Constants.ERROR_MOVIE_NOT_FOUND_MSG, movieTitle));
 
             ObjectMapper objectMapper = new ObjectMapper();
             movieInfo = objectMapper.readValue(response.body(), MovieInfoDto.class);
@@ -110,27 +147,18 @@ public class MovieServiceImpl implements MovieService {
         return movieInfo;
     }
 
-    @Override
-    public void saveRating(String title, double rating) throws Exception {
-
-        //MovieInfoDto movieInfo = searchMovieByTitle(title);
-        MovieRating movieRating = MovieRating.builder()
-                .rating(rating)
-                .movieId(1l)
-                .user(getAuthenticatedUser())
-                .build();
-        movieRatingRepository.save(movieRating);
-    }
-
-    private MovieInfo parseCSVLine(String line) {
-        String[] fields = line.split(Constants.COMMA_SEPARATOR);
-
-        return MovieInfo.builder()
-                .year(fields[Constants.INDEX_ZERO])
-                .category(fields[Constants.INDEX_ONE])
-                .nominee(fields[Constants.INDEX_TWO])
-                .additionalInfo(fields[Constants.INDEX_THREE])
-                .oscarWon(fields[Constants.INDEX_FOUR])
+    private Movie dtoToEntity(MovieInfoDto movieInfo, boolean oscarWon) {
+        return Movie.builder()
+                .imdId(movieInfo.imdbID())
+                .title(movieInfo.title())
+                .actors(movieInfo.actors())
+                .genre(movieInfo.genre())
+                .released(movieInfo.released())
+                .awards(movieInfo.awards())
+                .rating(new BigDecimal(movieInfo.imdbRating()))
+                .votes(Long.parseLong(movieInfo.imdbVotes().replace(",", "")))
+                .boxOffice(movieInfo.boxOffice())
+                .oscarWon(oscarWon)
                 .build();
     }
 

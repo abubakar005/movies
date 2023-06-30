@@ -1,7 +1,7 @@
 package com.backbase.movies.resource;
 
-import com.backbase.movies.dto.MovieInfoDto;
 import com.backbase.movies.service.MovieService;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,25 +17,24 @@ public class MoviesController {
         this.movieService = movieService;
     }
 
-    @GetMapping("/hi")
-    public String getMesg() {
-        return "hi";
-    }
-    @GetMapping
-    public String hello() throws Exception {
-        movieService.importDataFromCSV("D:\\Recruiters\\Backbase\\academy_awards.csv");
-        return "Hellooooooo";
-    }
-
-    @GetMapping("/search-by-title/{title}")
-    public MovieInfoDto searchByTitle(@PathVariable("title") String title) throws Exception {
-        return movieService.searchMovieByTitle(title);
+    @GetMapping("/{movie-title}/best-picture-award")
+    public ResponseEntity<String> checkBestPictureAward(@NotNull @PathVariable("movie-title") String movieTitle) {
+        return ResponseEntity.status(HttpStatus.OK).body(movieService.hasWonBestPictureAward(movieTitle));
     }
 
     @PostMapping("/{title}/rating")
-    public ResponseEntity<Void> rateMovie(@PathVariable String title,
-                                          @RequestParam double rating) throws Exception {
+    public ResponseEntity<String> rateMovie(@NotNull @PathVariable("title") String title,
+                                          @NotNull @RequestParam int rating) {
+
+        if (rating < 1 || rating > 10)
+            return ResponseEntity.badRequest().body("Rating value should be between 1 and 10.");
+
         movieService.saveRating(title, rating);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+        return ResponseEntity.ok("Rating saved successfully.");
+    }
+
+    @GetMapping("/top-rated")
+    public ResponseEntity<String> topRatedMovies() {
+        return null;
     }
 }

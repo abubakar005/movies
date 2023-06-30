@@ -18,7 +18,7 @@ public class ExceptionControllerAdvisor {
 
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     @ExceptionHandler(UserUnauthorizedException.class)
-    public ResponseEntity<ErrorInfo> handleValidationException(UserUnauthorizedException exception) {
+    public ResponseEntity<ErrorInfo> handleUnauthorizedException(UserUnauthorizedException exception) {
         log.error("Validation exception occurred with errors: {}", exception.getMessage());
         return new ResponseEntity<>(new ErrorInfo(exception.getCode(), exception.getMessage()), HttpStatus.UNAUTHORIZED);
     }
@@ -32,15 +32,22 @@ public class ExceptionControllerAdvisor {
 
     @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
     @ExceptionHandler(ServiceUnavailableException.class)
-    public ResponseEntity<ErrorInfo> serviceUnAvailableException(ServiceUnavailableException exception) {
+    public ResponseEntity<ErrorInfo> handleServiceUnAvailableException(ServiceUnavailableException exception) {
         log.error("Exception occurred with errors: {}", exception.getMsg());
         return new ResponseEntity<>(new ErrorInfo(exception.getCode(), exception.getMsg()), HttpStatus.SERVICE_UNAVAILABLE);
     }
 
     @ResponseStatus(HttpStatus.CONFLICT)
     @ExceptionHandler(DataConflictException.class)
-    public ResponseEntity<ErrorInfo> dataConflictException(DataConflictException exception) {
+    public ResponseEntity<ErrorInfo> handleDataConflictException(DataConflictException exception) {
         log.error("Exception occurred with errors: {}", exception.getMsg());
         return new ResponseEntity<>(new ErrorInfo(exception.getCode(), exception.getMsg()), HttpStatus.CONFLICT);
+    }
+
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+    @ExceptionHandler(GeneralException.class)
+    public ResponseEntity<ErrorInfo> handleGeneralException(GeneralException exception) {
+        log.error("Exception occurred with errors: {}", exception.getMsg());
+        return new ResponseEntity<>(new ErrorInfo(exception.getCode(), exception.getMsg()), HttpStatus.SERVICE_UNAVAILABLE);
     }
 }
