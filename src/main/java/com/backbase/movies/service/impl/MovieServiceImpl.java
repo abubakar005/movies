@@ -1,6 +1,7 @@
 package com.backbase.movies.service.impl;
 
 import com.backbase.movies.dto.MovieInfoDto;
+import com.backbase.movies.dto.TopRatedMovie;
 import com.backbase.movies.entity.Movie;
 import com.backbase.movies.entity.MovieRating;
 import com.backbase.movies.entity.User;
@@ -17,22 +18,17 @@ import com.backbase.movies.util.Constants;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.io.BufferedReader;
-import java.io.FileReader;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -84,36 +80,70 @@ public class MovieServiceImpl implements MovieService {
     }
 
     @Override
+    @Transactional
     public void saveRating(String title, int rating) {
-        Movie movie = movieRepository.findByTitle(title)
-                .orElseGet(() -> {
-                    try {
-                        MovieInfoDto movieInfoDto = searchMovieByTitle(title);
-                        String result = AwardsInfoFileUploadUtil.getBestPictureAwardsMap().get(title);
-                        boolean awardWon = result != null && result.equals(Constants.YES);
 
-                        return dtoToEntity(movieInfoDto, awardWon);
-                    } catch (Exception e) {
-                        throw new GeneralException(Constants.GENERAL_ERROR, e.getMessage());
-                    }
-                });
+        boolean isAlreadyRated = false;
+        Movie movie;
+        MovieRating movieRating = null;
+        User activeUser = getAuthenticatedUser();
+
+        Optional<Movie> movieOptional = movieRepository.findByTitle(title);
+
+        if (movieOptional.isPresent()) {
+            movie = movieOptional.get();
+            Optional<MovieRating> oldRatingOptional = movieRatingRepository.findByUserAndMovie(activeUser, movie);
+
+            if(oldRatingOptional.isPresent()) {
+                movieRating = oldRatingOptional.get();
+                isAlreadyRated = true;
+            }
+        } else {
+            try {
+                MovieInfoDto movieInfoDto = searchMovieByTitle(title);
+                String result = AwardsInfoFileUploadUtil.getBestPictureAwardsMap().get(title);
+                boolean awardWon = result != null && result.equals(Constants.YES);
+
+                movie = dtoToEntity(movieInfoDto, awardWon);
+            } catch (Exception e) {
+                throw new GeneralException(Constants.GENERAL_ERROR, e.getMessage());
+            }
+        }
 
         long totalVotes = movie.getVotes();
         BigDecimal oldRating = movie.getRating();
+        BigDecimal updatedRating = oldRating.multiply(BigDecimal.valueOf(totalVotes)).add(BigDecimal.valueOf(rating));
 
-        BigDecimal newRating = BigDecimal.valueOf(rating);
-        BigDecimal updatedRating = oldRating.multiply(BigDecimal.valueOf(totalVotes)).add(newRating);
+        // If already rated the same movie then reducing counter by 1 and subtracting old rating from total rating
+        if(isAlreadyRated) {
+            totalVotes -= 1;
+            updatedRating = updatedRating.subtract(BigDecimal.valueOf(movieRating.getRating()));
+            movieRating.setRating(rating);
+        } else {
+            movieRating = MovieRating.builder()
+                    .rating(rating)
+                    .movie(movie)
+                    .user(getAuthenticatedUser())
+                    .build();
+        }
+
+        movieRatingRepository.save(movieRating);
+
         long updatedVotes = totalVotes + 1;
-        movie.setRating(updatedRating.divide(BigDecimal.valueOf(updatedVotes), 1, RoundingMode.CEILING));
+        movie.setRating(updatedRating.divide(BigDecimal.valueOf(updatedVotes), 2, RoundingMode.HALF_UP)
+                .setScale(1, RoundingMode.HALF_UP));
         movie.setVotes(updatedVotes);
 
         movieRepository.save(movie);
-          /* MovieRating movieRating = MovieRating.builder()
-                .rating(rating)
-                .movieId(1l)
-                .user(getAuthenticatedUser())
-                .build();
-        movieRatingRepository.save(movieRating);*/
+    }
+
+    @Override
+    public List<TopRatedMovie> topRatedMovies() {
+        List<Movie> top10Movies = movieRepository.findTop10ByOrderByRatingDescBoxOfficeDesc();
+
+        return top10Movies.stream()
+                .map(this::entityToDto)
+                .toList();
     }
 
     private MovieInfoDto searchMovieByTitle(String movieTitle) throws Exception {
@@ -160,6 +190,10 @@ public class MovieServiceImpl implements MovieService {
                 .boxOffice(movieInfo.boxOffice())
                 .oscarWon(oscarWon)
                 .build();
+    }
+
+    private TopRatedMovie entityToDto(Movie movie) {
+        return new TopRatedMovie(movie.getImdId(), movie.getTitle(), movie.getRating(), movie.getBoxOffice(), movie.getOscarWon());
     }
 
     private User getAuthenticatedUser() {

@@ -13,20 +13,21 @@ import java.io.Serializable;
 @AllArgsConstructor
 @Builder(toBuilder = true)
 @Entity
-@Table(name = "Movie_Rating")
+@Table(name = "Movie_Ratings")
 public class MovieRating implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column
-    private Long movieId;
-
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
 
+    @ManyToOne
+    @JoinColumn(name = "movie_id")
+    private Movie movie;
+
     @Column
-    private Double rating;
+    private int rating;
 }

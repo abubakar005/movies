@@ -1,10 +1,13 @@
 package com.backbase.movies.resource;
 
+import com.backbase.movies.dto.TopRatedMovie;
 import com.backbase.movies.service.MovieService;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 
 @RestController
@@ -34,7 +37,7 @@ public class MoviesController {
     }
 
     @GetMapping("/top-rated")
-    public ResponseEntity<String> topRatedMovies() {
-        return null;
+    public ResponseEntity<List<TopRatedMovie>> topRatedMovies() {
+        return ResponseEntity.status(HttpStatus.OK).body(movieService.topRatedMovies());
     }
 }
