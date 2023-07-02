@@ -29,7 +29,9 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.text.NumberFormat;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 @Service
@@ -163,7 +165,7 @@ public class MovieServiceImpl implements MovieService {
         response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
         int statusCode = response.statusCode();
 
-        if (statusCode == 200) {
+        if (statusCode == Constants.STATUS_CODE_SUCCESS) {
 
             if(response.body().contains(Constants.ERROR_MESSAGE))
                 throw new NotFoundException(Constants.ERROR_MOVIE_NOT_FOUND, String.format(Constants.ERROR_MOVIE_NOT_FOUND_MSG, movieTitle));
@@ -187,13 +189,13 @@ public class MovieServiceImpl implements MovieService {
                 .awards(movieInfo.awards())
                 .rating(new BigDecimal(movieInfo.imdbRating()))
                 .votes(Long.parseLong(movieInfo.imdbVotes().replace(",", "")))
-                .boxOffice(movieInfo.boxOffice())
+                .boxOffice(convertBoxOfficeValueToLong(movieInfo.boxOffice()))
                 .oscarWon(oscarWon)
                 .build();
     }
 
     private TopRatedMovie entityToDto(Movie movie) {
-        return new TopRatedMovie(movie.getImdId(), movie.getTitle(), movie.getRating(), movie.getBoxOffice(), movie.getOscarWon());
+        return new TopRatedMovie(movie.getImdId(), movie.getTitle(), movie.getRating(), longToBoxOffice(movie.getBoxOffice()), movie.getOscarWon());
     }
 
     private User getAuthenticatedUser() {
@@ -204,5 +206,19 @@ public class MovieServiceImpl implements MovieService {
 
         var userDetails = (UserDetails) authentication.getPrincipal();
         return userRepository.findByUserName(userDetails.getUsername()).orElse(null);
+    }
+
+    private long convertBoxOfficeValueToLong(String boxOffice) {
+        return switch (boxOffice.strip()) {
+            case Constants.NOT_APPLICABLE -> 0L;
+            default -> Long.parseLong(boxOffice.replace("$", "").replace(",", ""));
+        };
+    }
+
+    private String longToBoxOffice(long boxOffice) {
+        if(boxOffice == 0L)
+            return Constants.NOT_APPLICABLE;
+        NumberFormat numberFormat = NumberFormat.getNumberInstance(Locale.US);
+        return Constants.DOLLAR_SIGN+numberFormat.format(boxOffice);
     }
 }

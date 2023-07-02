@@ -1,1 +1,0 @@
-insert into users (email, password, roles, user_name) values ('abcd3@gmail.com', '$2a$10$jQXIy2Vba3hHELlrVWZNV.pNaUFOVgrQdRtPB1iTGNXQXXuRyS0yi', 'Role_User', 'Test3');

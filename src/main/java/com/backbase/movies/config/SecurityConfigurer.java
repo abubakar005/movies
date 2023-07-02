@@ -35,9 +35,9 @@ public class SecurityConfigurer {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http.csrf().disable()
                 .authorizeHttpRequests()
-                .requestMatchers("/api/v1/user/**", "/swagger-ui/**").permitAll()
+                .requestMatchers("/api/v1/user/authenticate", "/swagger-ui/**", "/v3/api-docs/**", "/actuator/**").permitAll()
                 .and()
-                .authorizeHttpRequests().requestMatchers("/api/v1/movie/**")
+                .authorizeHttpRequests().requestMatchers("/api/v1/movie/**", "/api/v1/user/create")
                 .authenticated().and()
                 .sessionManagement()
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)

@@ -46,7 +46,7 @@ public class Movie implements Serializable {
     private Long votes;
 
     @Column
-    private String boxOffice;
+    private Long boxOffice;
 
     @Column
     private Boolean oscarWon;

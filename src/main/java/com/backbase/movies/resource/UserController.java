@@ -4,7 +4,9 @@ import com.backbase.movies.dto.AuthenticationRequest;
 import com.backbase.movies.dto.AuthenticationResponse;
 import com.backbase.movies.dto.CreateUserRequest;
 import com.backbase.movies.service.UserService;
+import com.backbase.movies.util.Constants;
 import com.backbase.movies.util.JwtServiceUtil;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @Validated
 @RequestMapping("/api/v1/user")
+@Tag(name = "User Controller", description = "Controller to handle all about the Users")
 public class UserController {
 
     @Autowired
@@ -36,7 +39,7 @@ public class UserController {
         if (authentication.isAuthenticated()) {
             return ResponseEntity.ok(new AuthenticationResponse(jwtService.generateToken(authRequest.username())));
         } else {
-            throw new UsernameNotFoundException("invalid user request !");
+            throw new UsernameNotFoundException(Constants.ERROR_INVALID_USER_REQUEST_MSG);
         }
     }
 
